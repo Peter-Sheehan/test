@@ -1,33 +1,41 @@
-FROM python:latest
+# Use multi-stage builds to minimize the final image size
+FROM python:3.11-slim AS builder
 
-# Violate: Avoid apt-get update alone
-RUN apt-get update
+# Set up a working directory
+WORKDIR /app
 
-# Violate: Install unnecessary, no --no-install-recommends, no version pin, no cleanup
-RUN apt-get install -y vim
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libffi-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Violate: RUN cd
-RUN mkdir -p /app && cd /app
+# Copy the requirements file and install packages
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Violate: Relative WORKDIR
-WORKDIR app
+# --------------
+# Final stage
+FROM python:3.11-slim
 
-# Violate: ADD instead of COPY
-ADD requirements.txt .
+# Set up a working directory
+WORKDIR /app
 
-# Violate: Combine multiple RUNs
-RUN pip install flask
-RUN pip install gunicorn
+# Copy only the necessary files from the builder stage
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin/gunicorn /usr/local/bin/gunicorn
 
-# Violate: Copy without .dockerignore (potentially)
-ADD . .
+# Copy the application code
+COPY . .
 
-# Violate: Empty ENV
-ENV MY_VAR=
+# Specify a non-root user
+RUN adduser --disabled-password --gecos '' myuser
+USER myuser
 
-# Violate: CMD with multiple processes
-CMD python app.py
+# Set environment variables
+ENV MY_VAR=default_value
 
-# Violate: No USER instruction (runs as root)
+# Expose the application's port
+EXPOSE 8080
 
-EXPOSE 8080 
+# Use CMD to run the application
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
