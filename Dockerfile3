@@ -26,7 +26,7 @@ ADD . .
 ENV MY_VAR=
 
 # Violate: CMD with multiple processes
-CMD service fake-service start && python app.py
+CMD python app.py
 
 # Violate: No USER instruction (runs as root)
 
