@@ -1,33 +1,33 @@
-FROM python:latest
+# Using multi-stage builds to reduce image size
+FROM python:3.9-slim AS build
 
-# Violate: Avoid apt-get update alone
-RUN apt-get update
+LABEL maintainer="maintainer@example.com"
 
-# Violate: Install unnecessary, no --no-install-recommends, no version pin, no cleanup
-RUN apt-get install -y vim
+# Set working directory
+WORKDIR /app
 
-# Violate: RUN cd
-RUN mkdir -p /app && cd /app
+# Copy and install dependencies using a requirements file
+COPY requirements.txt .
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Violate: Relative WORKDIR
-WORKDIR app
+# Second stage: FROM instruction with a specific, minimal base image
+FROM python:3.9-slim
 
-# Violate: ADD instead of COPY
-ADD requirements.txt .
+# Create non-root user and switch to it
+RUN useradd -m myuser
+USER myuser
 
-# Violate: Combine multiple RUNs
-RUN pip install flask
-RUN pip install gunicorn
+# Set working directory to absolute path
+WORKDIR /app
 
-# Violate: Copy without .dockerignore (potentially)
-ADD . .
+# Copy application code from build stage
+COPY --from=build /app /app
 
-# Violate: Empty ENV
-ENV MY_VAR=
+# Ensure essential environment variables are set
+ENV MY_VAR=default_value
 
-# Violate: CMD with multiple processes
+# Command to run the application
 CMD ["python", "app.py"]
 
-# Violate: No USER instruction (runs as root)
-
-EXPOSE 8080 
+EXPOSE 8080
