@@ -1,33 +1,31 @@
-FROM python:latest
+# Start with a specific, stable version of Python
+FROM python:3.9-slim AS builder
 
-# Violate: Avoid apt-get update alone
-RUN apt-get update
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Violate: Install unnecessary, no --no-install-recommends, no version pin, no cleanup
-RUN apt-get install -y vim
+# Set a working directory and use absolute path
+WORKDIR /app
 
-# Violate: RUN cd
-RUN cd /app
+# Install OS dependencies and clean up to reduce image size
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libffi-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Violate: Relative WORKDIR
-WORKDIR app
+# Copy only the dependencies first to leverage Docker caching
+COPY requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Violate: ADD instead of COPY
-ADD requirements.txt .
+# Copy the actual application
+COPY . .
 
-# Violate: Combine multiple RUNs
-RUN pip install flask
-RUN pip install gunicorn
+# Switch to a non-root user
+RUN useradd -m myuser
+USER myuser
 
-# Violate: Copy without .dockerignore (potentially)
-ADD . .
+# Expose the port that our application will run on
+EXPOSE 8080
 
-# Violate: Empty ENV
-ENV MY_VAR=
-
-# Violate: CMD with multiple processes
-CMD service fake-service start && python app.py
-
-# Violate: No USER instruction (runs as root)
-
-EXPOSE 8080 
+# Default command to run the application
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
