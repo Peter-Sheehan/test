@@ -1,33 +1,37 @@
-FROM python:latest
+FROM python:3.10-slim-buster AS builder
 
-# Violate: Avoid apt-get update alone
-RUN apt-get update
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc \
+ && rm -rf /var/lib/apt/lists/*
 
-# Violate: Install unnecessary, no --no-install-recommends, no version pin, no cleanup
-RUN apt-get install -y vim
+WORKDIR /app
 
-# Violate: RUN cd
-RUN mkdir -p /app && cd /app
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Violate: Relative WORKDIR
-WORKDIR app
+FROM python:3.10-slim-buster
 
-# Violate: ADD instead of COPY
-ADD requirements.txt .
+# Copy application files
+COPY --from=builder /app /app
 
-# Violate: Combine multiple RUNs
-RUN pip install flask
-RUN pip install gunicorn
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+ && rm -rf /var/lib/apt/lists/*
 
-# Violate: Copy without .dockerignore (potentially)
-ADD . .
+WORKDIR /app
 
-# Violate: Empty ENV
-ENV MY_VAR=
+COPY . .
 
-# Violate: CMD with multiple processes
-CMD ["python", "app.py"]
+# Environment variable example (set properly if used)
+ENV MY_VAR=some_value
 
-# Violate: No USER instruction (runs as root)
+# Create and use a non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+USER appuser
 
-EXPOSE 8080 
+EXPOSE 8080
+
+# Set entrypoint for the container
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
