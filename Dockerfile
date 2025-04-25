@@ -1,16 +1,20 @@
-# Dockerfile designed to test the post-processor with a VALID pin
+# Unoptimized Dockerfile for testing
 
-# Base image (Debian Bookworm)
 FROM python:3.11-slim
 
 LABEL maintainer="Test User <test@example.com>"
 
 
+RUN apt-get update
+
+RUN apt-get install -y vim=8.1.* jq=1.6-2.1
+
+WORKDIR /app
 
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends jq=1.6-2.1 && \
-    rm -rf /var/lib/apt/lists/*
+RUN echo "hello" > dummy.txt
 
-# Add a simple command to show jq version if it installs
-CMD ["jq", "--version"]
+
+ADD dummy.txt .
+
+CMD ["echo", "Done"]
