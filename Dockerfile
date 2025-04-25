@@ -1,4 +1,4 @@
-# Dockerfile designed to test the post-processor pin removal
+# Dockerfile designed to test the post-processor with a VALID pin
 
 # Base image (Debian Bookworm)
 FROM python:3.11-slim
@@ -9,8 +9,8 @@ WORKDIR /test
 
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl=7.64.* && \
+    apt-get install -y --no-install-recommends jq=1.6-2.1 && \
     rm -rf /var/lib/apt/lists/*
 
-# Add a simple command to show curl version if it installs
-CMD ["curl", "--version"]
+# Add a simple command to show jq version if it installs
+CMD ["jq", "--version"]
