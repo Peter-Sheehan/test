@@ -1,16 +1,18 @@
-# Unoptimized Dockerfile for testing
+# Basic Unoptimized Dockerfile
 
-FROM python:3.11-slim
+FROM python:latest
 
-LABEL maintainer="Test User <test@example.com>"
-
-
-RUN apt-get update
-
-RUN apt-get install -y vim=8.1.* jq=1.6-2.1
+RUN apt-get update && apt-get install -y vim
 
 WORKDIR /app
 
+ADD requirements.txt .
+RUN pip install -r requirements.txt
+
+ADD . .
 
 
-CMD ["echo", "Done"]
+EXPOSE 5000
+
+
+CMD ["python", "app.py"]
