@@ -5,7 +5,7 @@ FROM python:3.11-slim
 
 LABEL maintainer="Test User <test@example.com>"
 
-WORKDIR /test
+
 
 
 RUN apt-get update && \
