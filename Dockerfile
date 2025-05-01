@@ -1,18 +1,22 @@
-# Basic Unoptimized Dockerfile
+# Optimized Dockerfile
 
-FROM python:latest
-
-RUN apt-get update && apt-get install -y vim
+FROM python:3.9-slim as builder
 
 WORKDIR /app
 
-ADD requirements.txt .
-RUN pip install -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-ADD . .
+FROM python:3.9-slim
 
+WORKDIR /app
+
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY . .
 
 EXPOSE 5000
 
+RUN useradd -ms /bin/bash appuser
+USER appuser
 
 CMD ["python", "app.py"]
