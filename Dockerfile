@@ -1,27 +1,33 @@
-FROM ubuntu:18.04
+FROM python:3.9-slim-buster
 
 LABEL maintainer="test@example.com"
-LABEL description="A Dockerfile with several bad practices for testing, now with pip."
+LABEL description="A Dockerfile with several bad practices optimized for security and efficiency."
 
-# Inefficient updates and separate installs
-RUN apt-get update
-RUN apt-get install -y curl wget git python3-pip # Added python3-pip here
-# RUN apt-get install -y wget # Combined above
-# RUN apt-get install -y git # Combined above
-RUN apt-get update 
-# Redundant update, but keeping for original structure for now
+# Install necessary packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    wget && \
+    rm -rf /var/lib/apt/lists/*
 
-# Using ADD for a simple local file copy (imagine myapp_scripts.sh is a local script)
-ADD myapp_scripts.sh /usr/local/bin/myapp_scripts.sh
+# Use COPY instead of ADD for local files
+COPY myapp_scripts.sh /usr/local/bin/myapp_scripts.sh
 RUN chmod +x /usr/local/bin/myapp_scripts.sh
 
 WORKDIR /app
 
-# Copying entire build context
+# Copy only necessary files for production image
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
-# Install Python dependencies without cleaning up pip cache
-RUN pip3 install -r requirements.txt
+# Use a non-root user for better security
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 EXPOSE 8080
-# No CMD or ENTRYPOINT specified
+
+# Set a default CMD
+CMD ["python3", "app.py"]
